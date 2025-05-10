@@ -190,10 +190,17 @@ export function Sidebar({ currentPath, isMobileOpen, setIsMobileOpen }: SidebarP
             </NavItem>
             <NavItem
               href="/meetings"
-              icon="fas fa-calendar-alt"
+              icon="fas fa-list"
               isActive={currentPath.startsWith("/meetings")}
             >
               Meetings
+            </NavItem>
+            <NavItem
+              href="/calendar"
+              icon="fas fa-calendar-alt"
+              isActive={currentPath === "/calendar"}
+            >
+              Calendar
             </NavItem>
             <NavItem
               href="/action-items"
@@ -212,7 +219,7 @@ export function Sidebar({ currentPath, isMobileOpen, setIsMobileOpen }: SidebarP
           </nav>
 
           {/* Integrations */}
-          <div className="px-4 py-4 border-t border-gray-700 mt-5">
+          <div className="px-4 py-4 border-t border-gray-700/30 mt-5">
             <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
               Integrations
             </h2>
@@ -231,10 +238,10 @@ export function Sidebar({ currentPath, isMobileOpen, setIsMobileOpen }: SidebarP
 
           {/* User Profile */}
           {user && (
-            <div className="flex items-center px-4 py-3 border-t border-gray-700 mt-5">
+            <div className="flex items-center px-4 py-3 border-t border-gray-700/30 mt-5">
               <div className="flex-shrink-0">
                 <img
-                  className="h-8 w-8 rounded-full"
+                  className="h-8 w-8 rounded-full ring-2 ring-primary/30"
                   src={user.avatarUrl || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&h=100"}
                   alt="User profile"
                 />
