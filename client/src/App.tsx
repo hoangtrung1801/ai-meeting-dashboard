@@ -9,6 +9,7 @@ import Meetings from "@/pages/meetings";
 import MeetingDetail from "@/pages/meetings/[id]";
 import ActionItems from "@/pages/action-items";
 import Settings from "@/pages/settings";
+import Calendar from "@/pages/calendar";
 import { Sidebar } from "@/components/ui/sidebar";
 import { useState } from "react";
 
@@ -18,6 +19,7 @@ function Router() {
       <Route path="/" component={Dashboard} />
       <Route path="/meetings" component={Meetings} />
       <Route path="/meetings/:id" component={MeetingDetail} />
+      <Route path="/calendar" component={Calendar} />
       <Route path="/action-items" component={ActionItems} />
       <Route path="/settings" component={Settings} />
       <Route component={NotFound} />

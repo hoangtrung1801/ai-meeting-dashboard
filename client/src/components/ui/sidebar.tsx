@@ -82,10 +82,17 @@ export function Sidebar({ currentPath, isMobileOpen, setIsMobileOpen }: SidebarP
             </NavItem>
             <NavItem
               href="/meetings"
-              icon="fas fa-calendar-alt"
+              icon="fas fa-list"
               isActive={currentPath.startsWith("/meetings")}
             >
               Meetings
+            </NavItem>
+            <NavItem
+              href="/calendar"
+              icon="fas fa-calendar-alt"
+              isActive={currentPath === "/calendar"}
+            >
+              Calendar
             </NavItem>
             <NavItem
               href="/action-items"
