@@ -16,8 +16,8 @@ const NavItem = ({ href, icon, children, isActive }: NavItemProps) => (
       className={cn(
         "flex items-center px-2 py-2 text-sm rounded-md",
         isActive
-          ? "bg-gray-800 text-white"
-          : "text-gray-300 hover:bg-gray-700 hover:text-white"
+          ? "bg-primary/20 text-white"
+          : "text-gray-300 hover:bg-primary/10 hover:text-white"
       )}
     >
       <i
@@ -41,7 +41,7 @@ interface IntegrationItemProps {
 const IntegrationItem = ({ href, icon, children }: IntegrationItemProps) => (
   <a
     href={href}
-    className="flex items-center px-2 py-2 text-sm rounded-md text-gray-300 hover:bg-gray-700 hover:text-white"
+    className="flex items-center px-2 py-2 text-sm rounded-md text-gray-300 hover:bg-primary/10 hover:text-white transition-colors duration-200"
   >
     <i className={cn("w-6 mr-3", icon)}></i>
     {children}
@@ -61,12 +61,12 @@ export function Sidebar({ currentPath, isMobileOpen, setIsMobileOpen }: SidebarP
 
   const desktopSidebar = (
     <div className="hidden md:flex md:flex-shrink-0">
-      <div className="flex flex-col w-64 bg-dark">
+      <div className="flex flex-col w-64 bg-[#1e293b]">
         {/* Logo */}
-        <div className="flex items-center h-16 px-4 bg-dark border-b border-gray-700">
+        <div className="flex items-center h-16 px-4 bg-[#1e293b] border-b border-gray-700/50">
           <div className="flex items-center">
             <i className="fas fa-microphone-alt text-primary text-2xl mr-2"></i>
-            <span className="text-white font-semibold text-lg">MeetScribe</span>
+            <span className="text-white font-semibold text-lg bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">MeetScribe</span>
           </div>
         </div>
 
@@ -104,7 +104,7 @@ export function Sidebar({ currentPath, isMobileOpen, setIsMobileOpen }: SidebarP
           </nav>
 
           {/* Integrations */}
-          <div className="px-4 py-4 border-t border-gray-700">
+          <div className="px-4 py-4 border-t border-gray-700/30">
             <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
               Integrations
             </h2>
@@ -123,10 +123,10 @@ export function Sidebar({ currentPath, isMobileOpen, setIsMobileOpen }: SidebarP
 
           {/* User Profile */}
           {user && (
-            <div className="flex items-center px-4 py-3 border-t border-gray-700">
+            <div className="flex items-center px-4 py-3 border-t border-gray-700/30 mt-2">
               <div className="flex-shrink-0">
                 <img
-                  className="h-8 w-8 rounded-full"
+                  className="h-8 w-8 rounded-full ring-2 ring-primary/30"
                   src={user.avatarUrl || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&h=100"}
                   alt="User profile"
                 />
@@ -156,7 +156,7 @@ export function Sidebar({ currentPath, isMobileOpen, setIsMobileOpen }: SidebarP
         onClick={() => setIsMobileOpen(false)}
       ></div>
 
-      <div className="relative flex-1 flex flex-col max-w-xs w-full pt-5 pb-4 bg-dark">
+      <div className="relative flex-1 flex flex-col max-w-xs w-full pt-5 pb-4 bg-[#1e293b]">
         <div className="absolute top-0 right-0 -mr-12 pt-2">
           <button
             type="button"
@@ -170,7 +170,7 @@ export function Sidebar({ currentPath, isMobileOpen, setIsMobileOpen }: SidebarP
 
         <div className="flex-shrink-0 flex items-center px-4">
           <i className="fas fa-microphone-alt text-primary text-2xl mr-2"></i>
-          <span className="text-white font-semibold text-lg">MeetScribe</span>
+          <span className="text-white font-semibold text-lg bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">MeetScribe</span>
         </div>
         <div className="mt-5 flex-1 h-0 overflow-y-auto">
           <nav className="px-2 space-y-1">
