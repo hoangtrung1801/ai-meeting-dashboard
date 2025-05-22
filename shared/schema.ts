@@ -1,38 +1,164 @@
 import {
-    pgTable,
-    text,
-    serial,
-    integer,
-    boolean,
-    timestamp,
-    json,
-} from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod";
+    Entity,
+    PrimaryKey,
+    Property,
+    Enum,
+    Collection,
+    OneToMany,
+    ManyToOne,
+} from "@mikro-orm/core";
+import { ObjectId } from "@mikro-orm/mongodb";
 
-// Users table
-export const users = pgTable("users", {
-    id: serial("id").primaryKey(),
-    username: text("username").notNull().unique(),
-    password: text("password").notNull(),
-    fullName: text("full_name").notNull(),
-    email: text("email").notNull(),
-    avatarUrl: text("avatar_url"),
-});
+// User entity
+@Entity({ tableName: "User" })
+export class User {
+    @PrimaryKey({ type: "ObjectId" })
+    _id!: ObjectId;
 
-export const insertUserSchema = createInsertSchema(users).pick({
-    username: true,
-    password: true,
-    fullName: true,
-    email: true,
-    avatarUrl: true,
-});
+    @Property({ type: "string" })
+    username!: string;
+
+    @Property({ type: "string" })
+    password!: string;
+
+    @Property({ type: "string" })
+    fullName!: string;
+
+    @Property({ type: "string" })
+    email!: string;
+
+    @Property({ type: "string", nullable: true })
+    avatarUrl?: string;
+
+    @OneToMany(() => Meeting, (meeting) => meeting.user)
+    meetings = new Collection<Meeting>(this);
+}
+
+// Meeting status enum
+export enum MeetingStatus {
+    PENDING = "pending",
+    COMPLETED = "completed",
+    FAILED = "failed",
+}
+
+// Meeting entity
+@Entity({ tableName: "Bot" })
+export class Meeting {
+    @PrimaryKey({ type: "ObjectId" })
+    _id!: ObjectId;
+
+    @Property({ type: "string" })
+    id!: string;
+
+    @Property({ type: "string" })
+    botId!: string;
+
+    @ManyToOne(() => User)
+    user!: User;
+
+    @Enum(() => MeetingStatus)
+    status: MeetingStatus = MeetingStatus.PENDING;
+
+    @Property({ type: "string" })
+    meetingId!: string;
+
+    @Property({ type: "boolean" })
+    isRecording: boolean = false;
+
+    @Property({ type: "string" })
+    transcription: string = "";
+
+    @Property({ type: "string" })
+    summarization: string = "";
+
+    @Property({ type: "string" })
+    outputUrl: string = "";
+
+    @Property({ type: "date" })
+    createdAt: Date = new Date();
+
+    @Property({ type: "date", onUpdate: () => new Date() })
+    updatedAt: Date = new Date();
+
+    @OneToMany(() => Transcript, (transcript) => transcript.meeting)
+    transcripts = new Collection<Transcript>(this);
+
+    @OneToMany(() => Summary, (summary) => summary.meeting)
+    summaries = new Collection<Summary>(this);
+
+    @OneToMany(() => ActionItem, (actionItem) => actionItem.meeting)
+    actionItems = new Collection<ActionItem>(this);
+}
+
+// Transcript entity
+@Entity()
+export class Transcript {
+    @PrimaryKey({ type: "ObjectId" })
+    _id!: ObjectId;
+
+    @ManyToOne(() => Meeting)
+    meeting!: Meeting;
+
+    @Property({ type: "array" })
+    content!: TranscriptSegment[];
+
+    @Property({ type: "date" })
+    createdAt: Date = new Date();
+}
+
+// Summary entity
+@Entity()
+export class Summary {
+    @PrimaryKey({ type: "ObjectId" })
+    _id!: ObjectId;
+
+    @ManyToOne(() => Meeting)
+    meeting!: Meeting;
+
+    @Property({ type: "string" })
+    content!: string;
+
+    @Property({ type: "date" })
+    createdAt: Date = new Date();
+}
+
+// ActionItem entity
+@Entity()
+export class ActionItem {
+    @PrimaryKey({ type: "ObjectId" })
+    _id!: ObjectId;
+
+    @ManyToOne(() => Meeting)
+    meeting!: Meeting;
+
+    @Property({ type: "string" })
+    description!: string;
+
+    @Property({ type: "string" })
+    assignee!: string;
+
+    @Property({ type: "date", nullable: true })
+    dueDate?: Date;
+
+    @Property({ type: "boolean" })
+    completed: boolean = false;
+
+    @Property({ type: "date" })
+    createdAt: Date = new Date();
+}
+
+// Types
+export interface TranscriptSegment {
+    timestamp: string; // Format: 00:00:00
+    speaker: string;
+    text: string;
+}
 
 // Bot meeting data interface
 export interface BotMeetingData {
     _id: string;
     userId: string;
-    status: "pending" | "completed" | "failed";
+    status: MeetingStatus;
     meetingId: string;
     isRecording: boolean;
     transcription: string;
@@ -42,98 +168,12 @@ export interface BotMeetingData {
     outputUrl: string;
 }
 
-// Meetings table
-export const meetings = pgTable("meetings", {
-    id: serial("id").primaryKey(),
-    botId: text("bot_id").notNull(), // Maps to _id in bot data
-    userId: integer("user_id").notNull(),
-    status: text("status").notNull().default("pending"),
-    meetingId: text("meeting_id").notNull(),
-    isRecording: boolean("is_recording").notNull().default(false),
-    transcription: text("transcription").notNull().default(""),
-    summarization: text("summarization").notNull().default(""),
-    outputUrl: text("output_url").notNull().default(""),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
-
-export const insertMeetingSchema = createInsertSchema(meetings).pick({
-    botId: true,
-    userId: true,
-    status: true,
-    meetingId: true,
-    isRecording: true,
-    transcription: true,
-    summarization: true,
-    outputUrl: true,
-});
-
-// Transcripts table
-export const transcripts = pgTable("transcripts", {
-    id: serial("id").primaryKey(),
-    meetingId: integer("meeting_id").notNull(),
-    content: json("content").notNull(), // Array of transcript segments with speaker, text, and timestamp
-    createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const insertTranscriptSchema = createInsertSchema(transcripts).pick({
-    meetingId: true,
-    content: true,
-});
-
-// Summaries table
-export const summaries = pgTable("summaries", {
-    id: serial("id").primaryKey(),
-    meetingId: integer("meeting_id").notNull(),
-    content: text("content").notNull(),
-    createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const insertSummarySchema = createInsertSchema(summaries).pick({
-    meetingId: true,
-    content: true,
-});
-
-// ActionItems table
-export const actionItems = pgTable("action_items", {
-    id: serial("id").primaryKey(),
-    meetingId: integer("meeting_id").notNull(),
-    description: text("description").notNull(),
-    assignee: text("assignee").notNull(),
-    dueDate: timestamp("due_date"),
-    completed: boolean("completed").default(false),
-    createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const insertActionItemSchema = createInsertSchema(actionItems).pick({
-    meetingId: true,
-    description: true,
-    assignee: true,
-    dueDate: true,
-    completed: true,
-});
-
-// Types
-export type User = typeof users.$inferSelect;
-export type InsertUser = z.infer<typeof insertUserSchema>;
-
-export type Meeting = typeof meetings.$inferSelect;
-export type InsertMeeting = z.infer<typeof insertMeetingSchema>;
-
-export type Transcript = typeof transcripts.$inferSelect;
-export type InsertTranscript = z.infer<typeof insertTranscriptSchema>;
-
-export type Summary = typeof summaries.$inferSelect;
-export type InsertSummary = z.infer<typeof insertSummarySchema>;
-
-export type ActionItem = typeof actionItems.$inferSelect;
-export type InsertActionItem = z.infer<typeof insertActionItemSchema>;
-
-// Additional helper types
-export interface TranscriptSegment {
-    timestamp: string; // Format: 00:00:00
-    speaker: string;
-    text: string;
-}
-
-export type TranscriptContent = TranscriptSegment[];
+// DTO types for creating entities
+export type CreateUserDto = Omit<User, "_id" | "meetings">;
+export type CreateMeetingDto = Omit<
+    Meeting,
+    "_id" | "transcripts" | "summaries" | "actionItems"
+>;
+export type CreateTranscriptDto = Omit<Transcript, "_id">;
+export type CreateSummaryDto = Omit<Summary, "_id">;
+export type CreateActionItemDto = Omit<ActionItem, "_id">;

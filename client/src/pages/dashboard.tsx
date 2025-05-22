@@ -300,7 +300,7 @@ export default function Dashboard() {
                                     .slice(0, 3)
                                     .map((item) => (
                                         <ActionItemCard
-                                            key={item.id}
+                                            key={item._id.toString()}
                                             actionItem={item}
                                         />
                                     ))

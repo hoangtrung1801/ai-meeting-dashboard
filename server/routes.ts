@@ -1,66 +1,91 @@
+import { MongoEntityManager } from "@mikro-orm/mongodb";
+import { Meeting, MeetingStatus, User } from "@shared/schema";
 import type { Express, Request, Response } from "express";
-import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { createServer } from "http";
 import { z } from "zod";
-import {
-    insertMeetingSchema,
-    insertActionItemSchema,
-    insertTranscriptSchema,
-    insertSummarySchema,
-} from "@shared/schema";
+import { getStorage } from "./storage";
 
-export async function registerRoutes(app: Express): Promise<Server> {
+// Validation schemas
+const createUserSchema = z.object({
+    username: z.string(),
+    password: z.string(),
+    fullName: z.string(),
+    email: z.string().email(),
+    avatarUrl: z.string().optional(),
+});
+
+const createMeetingSchema = z.object({
+    botId: z.string(),
+    user: z.instanceof(User),
+    status: z.nativeEnum(MeetingStatus),
+    meetingId: z.string(),
+    isRecording: z.boolean(),
+    transcription: z.string(),
+    summarization: z.string(),
+    outputUrl: z.string(),
+    createdAt: z.date(),
+    updatedAt: z.date(),
+});
+
+const createActionItemSchema = z.object({
+    meeting: z.instanceof(Meeting),
+    description: z.string(),
+    assignee: z.string(),
+    dueDate: z.date().optional(),
+    completed: z.boolean(),
+    createdAt: z.date(),
+});
+
+export async function registerRoutes(app: Express) {
+    const em = app.get("em") as MongoEntityManager;
+    const storage = getStorage(em);
+
     // API routes
     const apiRouter = app.route("/api");
 
     // Current user info (mock for now)
-    app.get("/api/me", (req: Request, res: Response) => {
-        storage.getUser(1).then((user) => {
+    app.get("/api/me", async (req: Request, res: Response) => {
+        try {
+            const user = await storage.getUser("1");
             if (!user) {
                 return res.status(404).json({ message: "User not found" });
             }
-            // Don't return password in the response
             const { password, ...userWithoutPassword } = user;
             res.json(userWithoutPassword);
-        });
+        } catch (error) {
+            console.error("Error fetching user:", error);
+            res.status(500).json({
+                message: "Failed to fetch user",
+                error: error instanceof Error ? error.message : "Unknown error",
+            });
+        }
     });
 
     // Dashboard stats
     app.get("/api/dashboard/stats", async (req: Request, res: Response) => {
         try {
-            const userId = 1; // Using hardcoded user for demo
-            const meetings = await storage.getMeetingsByUserId(userId);
-            const pendingActionItems = await storage.getPendingActionItems(
-                userId
-            );
-
-            // Calculate total meeting minutes
-            // const totalMeetingMinutes = meetings.reduce(
-            //     (sum, meeting) => sum + meeting.duration,
-            //     0
-            // );
-            const totalMeetingMinutes = 0;
-
-            // Count completed action items
-            const completedActionItems = await storage.getPendingActionItems(
-                userId
-            );
-            const completedCount = completedActionItems.filter(
-                (item) => item.completed
-            ).length;
+            const userId = "1";
+            const [meetings, pendingActionItems] = await Promise.all([
+                storage.getMeetingsByUserId(userId),
+                storage.getPendingActionItems(userId),
+            ]);
 
             const stats = {
                 totalMeetings: meetings.length,
-                meetingMinutes: totalMeetingMinutes,
+                meetingMinutes: 0,
                 actionItems: pendingActionItems.length,
-                completedActionItems: completedCount,
-                storageUsed: "1.2 GB", // Mocked value for demo
+                completedActionItems: pendingActionItems.filter(
+                    (item) => item.completed
+                ).length,
+                storageUsed: "1.2 GB",
             };
 
             res.json(stats);
         } catch (error) {
+            console.error("Error fetching dashboard stats:", error);
             res.status(500).json({
                 message: "Failed to fetch dashboard stats",
+                error: error instanceof Error ? error.message : "Unknown error",
             });
         }
     });
@@ -68,13 +93,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Get recent meetings
     app.get("/api/meetings/recent", async (req: Request, res: Response) => {
         try {
-            const userId = 1; // Using hardcoded user for demo
+            const userId = "1";
             const limit = parseInt(req.query.limit as string) || 6;
             const meetings = await storage.getRecentMeetings(userId, limit);
             res.json(meetings);
         } catch (error) {
+            console.error("Error fetching recent meetings:", error);
             res.status(500).json({
                 message: "Failed to fetch recent meetings",
+                error: error instanceof Error ? error.message : "Unknown error",
             });
         }
     });
@@ -82,30 +109,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Get all meetings
     app.get("/api/meetings", async (req: Request, res: Response) => {
         try {
-            const response = await fetch(
-                "http://localhost:3000/api/v1/bots/all"
-            );
-            if (!response.ok) {
-                throw new Error(
-                    `Failed to fetch meetings: ${response.statusText}`
-                );
-            }
-            const data = await response.json();
-            res.json(data.bots);
-        } catch (error) {
-            console.error("Error fetching meetings:", error);
-            res.status(500).json({
-                message: "Failed to fetch meetings",
-                error: error instanceof Error ? error.message : "Unknown error",
-            });
-        }
-    });
-
-    // Sync bot meetings
-    app.get("/api/meetings", async (req: Request, res: Response) => {
-        try {
-            const syncedMeetings = await storage.fetchAndSyncBotMeetings();
-            res.json(syncedMeetings);
+            // const meetings = await storage.fetchAndSyncBotMeetings();
+            const meetings = await storage.getRecentMeetings("", 10);
+            console.log("meetings", meetings);
+            res.json(meetings);
         } catch (error) {
             console.error("Error syncing bot meetings:", error);
             res.status(500).json({
@@ -118,13 +125,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Get a specific meeting
     app.get("/api/meetings/:id", async (req: Request, res: Response) => {
         try {
-            const meetingId = parseInt(req.params.id);
-            const meeting = await storage.getMeeting(meetingId);
-
+            const meeting = await storage.getMeeting(req.params.id);
             if (!meeting) {
                 return res.status(404).json({ message: "Meeting not found" });
             }
-
             res.json(meeting);
         } catch (error) {
             res.status(500).json({ message: "Failed to fetch meeting" });
@@ -134,9 +138,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Create a new meeting
     app.post("/api/meetings", async (req: Request, res: Response) => {
         try {
-            // Validate request body
-            const validationResult = insertMeetingSchema.safeParse(req.body);
-
+            const validationResult = createMeetingSchema.safeParse(req.body);
             if (!validationResult.success) {
                 return res.status(400).json({
                     message: "Invalid meeting data",
@@ -154,19 +156,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Update a meeting
     app.patch("/api/meetings/:id", async (req: Request, res: Response) => {
         try {
-            const meetingId = parseInt(req.params.id);
-
-            // Get current meeting to ensure it exists
-            const existingMeeting = await storage.getMeeting(meetingId);
+            const existingMeeting = await storage.getMeeting(req.params.id);
             if (!existingMeeting) {
                 return res.status(404).json({ message: "Meeting not found" });
             }
 
-            // Validate request body (partial schema)
-            const validationResult = insertMeetingSchema
+            const validationResult = createMeetingSchema
                 .partial()
                 .safeParse(req.body);
-
             if (!validationResult.success) {
                 return res.status(400).json({
                     message: "Invalid meeting data",
@@ -175,7 +172,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
 
             const updatedMeeting = await storage.updateMeeting(
-                meetingId,
+                req.params.id,
                 validationResult.data
             );
             res.json(updatedMeeting);
@@ -187,13 +184,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Delete a meeting
     app.delete("/api/meetings/:id", async (req: Request, res: Response) => {
         try {
-            const meetingId = parseInt(req.params.id);
-            const success = await storage.deleteMeeting(meetingId);
-
+            const success = await storage.deleteMeeting(req.params.id);
             if (!success) {
                 return res.status(404).json({ message: "Meeting not found" });
             }
-
             res.status(204).send();
         } catch (error) {
             res.status(500).json({ message: "Failed to delete meeting" });
@@ -205,15 +199,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "/api/meetings/:id/transcript",
         async (req: Request, res: Response) => {
             try {
-                const meetingId = parseInt(req.params.id);
-                const transcript = await storage.getTranscript(meetingId);
-
+                const transcript = await storage.getTranscript(req.params.id);
                 if (!transcript) {
                     return res
                         .status(404)
                         .json({ message: "Transcript not found" });
                 }
-
                 res.json(transcript);
             } catch (error) {
                 res.status(500).json({ message: "Failed to fetch transcript" });
@@ -226,15 +217,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "/api/meetings/:id/summary",
         async (req: Request, res: Response) => {
             try {
-                const meetingId = parseInt(req.params.id);
-                const summary = await storage.getSummary(meetingId);
-
+                const summary = await storage.getSummary(req.params.id);
                 if (!summary) {
                     return res
                         .status(404)
                         .json({ message: "Summary not found" });
                 }
-
                 res.json(summary);
             } catch (error) {
                 res.status(500).json({ message: "Failed to fetch summary" });
@@ -247,8 +235,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "/api/meetings/:id/action-items",
         async (req: Request, res: Response) => {
             try {
-                const meetingId = parseInt(req.params.id);
-                const actionItems = await storage.getActionItems(meetingId);
+                const actionItems = await storage.getActionItems(req.params.id);
                 res.json(actionItems);
             } catch (error) {
                 res.status(500).json({
@@ -263,7 +250,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "/api/action-items/pending",
         async (req: Request, res: Response) => {
             try {
-                const userId = 1; // Using hardcoded user for demo
+                const userId = "1"; // Using hardcoded user for demo
                 const actionItems = await storage.getPendingActionItems(userId);
                 res.json(actionItems);
             } catch (error) {
@@ -277,9 +264,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Create a new action item
     app.post("/api/action-items", async (req: Request, res: Response) => {
         try {
-            // Validate request body
-            const validationResult = insertActionItemSchema.safeParse(req.body);
-
+            const validationResult = createActionItemSchema.safeParse(req.body);
             if (!validationResult.success) {
                 return res.status(400).json({
                     message: "Invalid action item data",
@@ -299,13 +284,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Update an action item
     app.patch("/api/action-items/:id", async (req: Request, res: Response) => {
         try {
-            const actionItemId = parseInt(req.params.id);
-
-            // Validate request body (partial schema)
-            const validationResult = insertActionItemSchema
+            const validationResult = createActionItemSchema
                 .partial()
                 .safeParse(req.body);
-
             if (!validationResult.success) {
                 return res.status(400).json({
                     message: "Invalid action item data",
@@ -314,10 +295,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
 
             const updatedActionItem = await storage.updateActionItem(
-                actionItemId,
+                req.params.id,
                 validationResult.data
             );
-
             if (!updatedActionItem) {
                 return res
                     .status(404)
@@ -333,15 +313,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Delete an action item
     app.delete("/api/action-items/:id", async (req: Request, res: Response) => {
         try {
-            const actionItemId = parseInt(req.params.id);
-            const success = await storage.deleteActionItem(actionItemId);
-
+            const success = await storage.deleteActionItem(req.params.id);
             if (!success) {
                 return res
                     .status(404)
                     .json({ message: "Action item not found" });
             }
-
             res.status(204).send();
         } catch (error) {
             res.status(500).json({ message: "Failed to delete action item" });
@@ -351,7 +328,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Search meetings
     app.get("/api/search/meetings", async (req: Request, res: Response) => {
         try {
-            const userId = 1; // Using hardcoded user for demo
+            const userId = "1"; // Using hardcoded user for demo
             const query = (req.query.q as string) || "";
 
             if (!query) {
