@@ -1,94 +1,116 @@
-import { pgTable, text, serial, integer, boolean, timestamp, json } from "drizzle-orm/pg-core";
+import {
+    pgTable,
+    text,
+    serial,
+    integer,
+    boolean,
+    timestamp,
+    json,
+} from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // Users table
 export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
-  fullName: text("full_name").notNull(),
-  email: text("email").notNull(),
-  avatarUrl: text("avatar_url"),
+    id: serial("id").primaryKey(),
+    username: text("username").notNull().unique(),
+    password: text("password").notNull(),
+    fullName: text("full_name").notNull(),
+    email: text("email").notNull(),
+    avatarUrl: text("avatar_url"),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
-  fullName: true,
-  email: true,
-  avatarUrl: true,
+    username: true,
+    password: true,
+    fullName: true,
+    email: true,
+    avatarUrl: true,
 });
+
+// Bot meeting data interface
+export interface BotMeetingData {
+    _id: string;
+    userId: string;
+    status: "pending" | "completed" | "failed";
+    meetingId: string;
+    isRecording: boolean;
+    transcription: string;
+    summarization: string;
+    createdAt: string;
+    updatedAt: string;
+    outputUrl: string;
+}
 
 // Meetings table
 export const meetings = pgTable("meetings", {
-  id: serial("id").primaryKey(),
-  title: text("title").notNull(),
-  date: timestamp("date").notNull(),
-  duration: integer("duration").notNull(), // In minutes
-  platformType: text("platform_type").notNull(), // Zoom, Teams, Google Meet, etc.
-  participants: integer("participants").notNull(),
-  recordingUrl: text("recording_url"),
-  transcriptionComplete: boolean("transcription_complete").default(false),
-  summaryComplete: boolean("summary_complete").default(false),
-  userId: integer("user_id").notNull(),
+    id: serial("id").primaryKey(),
+    botId: text("bot_id").notNull(), // Maps to _id in bot data
+    userId: integer("user_id").notNull(),
+    status: text("status").notNull().default("pending"),
+    meetingId: text("meeting_id").notNull(),
+    isRecording: boolean("is_recording").notNull().default(false),
+    transcription: text("transcription").notNull().default(""),
+    summarization: text("summarization").notNull().default(""),
+    outputUrl: text("output_url").notNull().default(""),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 export const insertMeetingSchema = createInsertSchema(meetings).pick({
-  title: true,
-  date: true,
-  duration: true,
-  platformType: true,
-  participants: true,
-  recordingUrl: true,
-  transcriptionComplete: true,
-  summaryComplete: true,
-  userId: true,
+    botId: true,
+    userId: true,
+    status: true,
+    meetingId: true,
+    isRecording: true,
+    transcription: true,
+    summarization: true,
+    outputUrl: true,
 });
 
 // Transcripts table
 export const transcripts = pgTable("transcripts", {
-  id: serial("id").primaryKey(),
-  meetingId: integer("meeting_id").notNull(),
-  content: json("content").notNull(), // Array of transcript segments with speaker, text, and timestamp
-  createdAt: timestamp("created_at").defaultNow(),
+    id: serial("id").primaryKey(),
+    meetingId: integer("meeting_id").notNull(),
+    content: json("content").notNull(), // Array of transcript segments with speaker, text, and timestamp
+    createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertTranscriptSchema = createInsertSchema(transcripts).pick({
-  meetingId: true,
-  content: true,
+    meetingId: true,
+    content: true,
 });
 
 // Summaries table
 export const summaries = pgTable("summaries", {
-  id: serial("id").primaryKey(),
-  meetingId: integer("meeting_id").notNull(),
-  content: text("content").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
+    id: serial("id").primaryKey(),
+    meetingId: integer("meeting_id").notNull(),
+    content: text("content").notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertSummarySchema = createInsertSchema(summaries).pick({
-  meetingId: true,
-  content: true,
+    meetingId: true,
+    content: true,
 });
 
 // ActionItems table
 export const actionItems = pgTable("action_items", {
-  id: serial("id").primaryKey(),
-  meetingId: integer("meeting_id").notNull(),
-  description: text("description").notNull(),
-  assignee: text("assignee").notNull(),
-  dueDate: timestamp("due_date"),
-  completed: boolean("completed").default(false),
-  createdAt: timestamp("created_at").defaultNow(),
+    id: serial("id").primaryKey(),
+    meetingId: integer("meeting_id").notNull(),
+    description: text("description").notNull(),
+    assignee: text("assignee").notNull(),
+    dueDate: timestamp("due_date"),
+    completed: boolean("completed").default(false),
+    createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertActionItemSchema = createInsertSchema(actionItems).pick({
-  meetingId: true,
-  description: true,
-  assignee: true,
-  dueDate: true,
-  completed: true,
+    meetingId: true,
+    description: true,
+    assignee: true,
+    dueDate: true,
+    completed: true,
 });
 
 // Types
@@ -109,9 +131,9 @@ export type InsertActionItem = z.infer<typeof insertActionItemSchema>;
 
 // Additional helper types
 export interface TranscriptSegment {
-  timestamp: string; // Format: 00:00:00
-  speaker: string;
-  text: string;
+    timestamp: string; // Format: 00:00:00
+    speaker: string;
+    text: string;
 }
 
 export type TranscriptContent = TranscriptSegment[];
