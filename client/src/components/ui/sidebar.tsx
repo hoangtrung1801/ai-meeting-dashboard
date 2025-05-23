@@ -1,270 +1,170 @@
-import React, { useState } from "react";
+import React from "react";
 import { Link, useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/lib/auth";
+import {
+    Calendar,
+    CheckSquare,
+    LogOut,
+    Menu,
+    MessageSquare,
+    Settings,
+    User,
+    X,
+} from "lucide-react";
+import { Button } from "./button";
 import { cn } from "@/lib/utils";
-
-interface NavItemProps {
-  href: string;
-  icon: string;
-  children: React.ReactNode;
-  isActive: boolean;
-}
-
-const NavItem = ({ href, icon, children, isActive }: NavItemProps) => (
-  <Link href={href}>
-    <a
-      className={cn(
-        "flex items-center px-2 py-2 text-sm rounded-md",
-        isActive
-          ? "bg-primary/20 text-white"
-          : "text-gray-300 hover:bg-primary/10 hover:text-white"
-      )}
-    >
-      <i
-        className={cn(
-          "w-6 mr-3",
-          isActive ? "text-primary" : "text-gray-400",
-          icon
-        )}
-      ></i>
-      {children}
-    </a>
-  </Link>
-);
-
-interface IntegrationItemProps {
-  href: string;
-  icon: string;
-  children: React.ReactNode;
-}
-
-const IntegrationItem = ({ href, icon, children }: IntegrationItemProps) => (
-  <a
-    href={href}
-    className="flex items-center px-2 py-2 text-sm rounded-md text-gray-300 hover:bg-primary/10 hover:text-white transition-colors duration-200"
-  >
-    <i className={cn("w-6 mr-3", icon)}></i>
-    {children}
-  </a>
-);
+import { useToast } from "@/hooks/use-toast";
 
 interface SidebarProps {
-  currentPath: string;
-  isMobileOpen: boolean;
-  setIsMobileOpen: (open: boolean) => void;
+    currentPath: string;
+    isMobileOpen: boolean;
+    setIsMobileOpen: (open: boolean) => void;
 }
 
-export function Sidebar({ currentPath, isMobileOpen, setIsMobileOpen }: SidebarProps) {
-  const { data: user } = useQuery({
-    queryKey: ["/api/me"],
-  });
+export function Sidebar({
+    currentPath,
+    isMobileOpen,
+    setIsMobileOpen,
+}: SidebarProps) {
+    const { user, logout } = useAuth();
+    const { toast } = useToast();
+    const [, navigate] = useLocation();
 
-  const desktopSidebar = (
-    <div className="hidden md:flex md:flex-shrink-0">
-      <div className="flex flex-col w-64 bg-[#1e293b]">
-        {/* Logo */}
-        <div className="flex items-center h-16 px-4 bg-[#1e293b] border-b border-gray-700/50">
-          <div className="flex items-center">
-            <i className="fas fa-microphone-alt text-primary text-2xl mr-2"></i>
-            <span className="text-white font-semibold text-lg bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">MeetScribe</span>
-          </div>
-        </div>
+    const handleLogout = () => {
+        logout();
+        toast({
+            title: "Logged out",
+            description: "You have been successfully logged out",
+        });
+        navigate("/login");
+    };
 
-        {/* Navigation */}
-        <div className="flex-1 flex flex-col overflow-y-auto">
-          <nav className="flex-1 px-2 py-4 space-y-1">
-            <NavItem
-              href="/"
-              icon="fas fa-home"
-              isActive={currentPath === "/" || currentPath === ""}
-            >
-              Dashboard
-            </NavItem>
-            <NavItem
-              href="/meetings"
-              icon="fas fa-list"
-              isActive={currentPath.startsWith("/meetings")}
-            >
-              Meetings
-            </NavItem>
-            <NavItem
-              href="/calendar"
-              icon="fas fa-calendar-alt"
-              isActive={currentPath === "/calendar"}
-            >
-              Calendar
-            </NavItem>
-            <NavItem
-              href="/action-items"
-              icon="fas fa-tasks"
-              isActive={currentPath === "/action-items"}
-            >
-              Action Items
-            </NavItem>
-            <NavItem
-              href="/settings"
-              icon="fas fa-cog"
-              isActive={currentPath === "/settings"}
-            >
-              Settings
-            </NavItem>
-          </nav>
+    const navItems = [
+        {
+            name: "Dashboard",
+            href: "/dashboard",
+            icon: MessageSquare,
+        },
+        {
+            name: "Meetings",
+            href: "/meetings",
+            icon: Calendar,
+        },
+        {
+            name: "Action Items",
+            href: "/action-items",
+            icon: CheckSquare,
+        },
+        {
+            name: "Calendar",
+            href: "/calendar",
+            icon: Calendar,
+        },
+        {
+            name: "Settings",
+            href: "/settings",
+            icon: Settings,
+        },
+    ];
 
-          {/* Integrations */}
-          <div className="px-4 py-4 border-t border-gray-700/30">
-            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-              Integrations
-            </h2>
-            <div className="mt-3 space-y-2">
-              <IntegrationItem href="#" icon="fab fa-zoom text-blue-400">
-                Zoom
-              </IntegrationItem>
-              <IntegrationItem href="#" icon="fab fa-google text-red-400">
-                Google Meet
-              </IntegrationItem>
-              <IntegrationItem href="#" icon="fab fa-microsoft text-blue-400">
-                Microsoft Teams
-              </IntegrationItem>
+    return (
+        <>
+            {/* Mobile menu button */}
+            <button
+                className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
+                onClick={() => setIsMobileOpen(!isMobileOpen)}
+            >
+                <span className="sr-only">Open sidebar</span>
+                {isMobileOpen ? (
+                    <X className="h-6 w-6" aria-hidden="true" />
+                ) : (
+                    <Menu className="h-6 w-6" aria-hidden="true" />
+                )}
+            </button>
+
+            {/* Sidebar */}
+            <div
+                className={cn(
+                    "fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0",
+                    isMobileOpen ? "translate-x-0" : "-translate-x-full"
+                )}
+            >
+                <div className="flex flex-col h-full">
+                    {/* User profile section */}
+                    <div className="p-4 border-b border-gray-200">
+                        <div className="flex items-center space-x-3">
+                            <div className="flex-shrink-0">
+                                {user?.avatarUrl ? (
+                                    <img
+                                        src={user.avatarUrl}
+                                        alt={user.fullName}
+                                        className="h-10 w-10 rounded-full"
+                                    />
+                                ) : (
+                                    <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                                        <User className="h-6 w-6 text-indigo-600" />
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-900 truncate">
+                                    {user?.fullName}
+                                </p>
+                                <p className="text-sm text-gray-500 truncate">
+                                    {user?.email}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Navigation */}
+                    <nav className="flex-1 px-2 py-4 space-y-1">
+                        {navItems.map((item) => (
+                            <Link
+                                key={item.name}
+                                href={item.href}
+                                className={cn(
+                                    "group flex items-center px-2 py-2 text-sm font-medium rounded-md",
+                                    currentPath === item.href
+                                        ? "bg-gray-100 text-gray-900"
+                                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                                )}
+                            >
+                                <item.icon
+                                    className={cn(
+                                        "mr-3 h-5 w-5",
+                                        currentPath === item.href
+                                            ? "text-gray-500"
+                                            : "text-gray-400 group-hover:text-gray-500"
+                                    )}
+                                    aria-hidden="true"
+                                />
+                                {item.name}
+                            </Link>
+                        ))}
+                    </nav>
+
+                    {/* Logout button */}
+                    <div className="p-4 border-t border-gray-200">
+                        <Button
+                            variant="ghost"
+                            className="w-full justify-start"
+                            onClick={handleLogout}
+                        >
+                            <LogOut className="mr-3 h-5 w-5" />
+                            Logout
+                        </Button>
+                    </div>
+                </div>
             </div>
-          </div>
 
-          {/* User Profile */}
-          {user && (
-            <div className="flex items-center px-4 py-3 border-t border-gray-700/30 mt-2">
-              <div className="flex-shrink-0">
-                <img
-                  className="h-8 w-8 rounded-full ring-2 ring-primary/30"
-                  src={user.avatarUrl || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&h=100"}
-                  alt="User profile"
+            {/* Overlay for mobile */}
+            {isMobileOpen && (
+                <div
+                    className="fixed inset-0 z-30 bg-gray-600 bg-opacity-75 lg:hidden"
+                    onClick={() => setIsMobileOpen(false)}
                 />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-white">{user.fullName}</p>
-                <p className="text-xs font-medium text-gray-400">{user.email}</p>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-
-  const mobileSidebar = (
-    <div
-      className={`fixed inset-0 flex z-40 md:hidden ${
-        isMobileOpen ? "" : "hidden"
-      }`}
-      role="dialog"
-      aria-modal="true"
-    >
-      <div
-        className="fixed inset-0 bg-gray-600 bg-opacity-75"
-        aria-hidden="true"
-        onClick={() => setIsMobileOpen(false)}
-      ></div>
-
-      <div className="relative flex-1 flex flex-col max-w-xs w-full pt-5 pb-4 bg-[#1e293b]">
-        <div className="absolute top-0 right-0 -mr-12 pt-2">
-          <button
-            type="button"
-            className="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
-            onClick={() => setIsMobileOpen(false)}
-          >
-            <span className="sr-only">Close sidebar</span>
-            <i className="fas fa-times text-white"></i>
-          </button>
-        </div>
-
-        <div className="flex-shrink-0 flex items-center px-4">
-          <i className="fas fa-microphone-alt text-primary text-2xl mr-2"></i>
-          <span className="text-white font-semibold text-lg bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">MeetScribe</span>
-        </div>
-        <div className="mt-5 flex-1 h-0 overflow-y-auto">
-          <nav className="px-2 space-y-1">
-            <NavItem
-              href="/"
-              icon="fas fa-home"
-              isActive={currentPath === "/" || currentPath === ""}
-            >
-              Dashboard
-            </NavItem>
-            <NavItem
-              href="/meetings"
-              icon="fas fa-list"
-              isActive={currentPath.startsWith("/meetings")}
-            >
-              Meetings
-            </NavItem>
-            <NavItem
-              href="/calendar"
-              icon="fas fa-calendar-alt"
-              isActive={currentPath === "/calendar"}
-            >
-              Calendar
-            </NavItem>
-            <NavItem
-              href="/action-items"
-              icon="fas fa-tasks"
-              isActive={currentPath === "/action-items"}
-            >
-              Action Items
-            </NavItem>
-            <NavItem
-              href="/settings"
-              icon="fas fa-cog"
-              isActive={currentPath === "/settings"}
-            >
-              Settings
-            </NavItem>
-          </nav>
-
-          {/* Integrations */}
-          <div className="px-4 py-4 border-t border-gray-700/30 mt-5">
-            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-              Integrations
-            </h2>
-            <div className="mt-3 space-y-2">
-              <IntegrationItem href="#" icon="fab fa-zoom text-blue-400">
-                Zoom
-              </IntegrationItem>
-              <IntegrationItem href="#" icon="fab fa-google text-red-400">
-                Google Meet
-              </IntegrationItem>
-              <IntegrationItem href="#" icon="fab fa-microsoft text-blue-400">
-                Microsoft Teams
-              </IntegrationItem>
-            </div>
-          </div>
-
-          {/* User Profile */}
-          {user && (
-            <div className="flex items-center px-4 py-3 border-t border-gray-700/30 mt-5">
-              <div className="flex-shrink-0">
-                <img
-                  className="h-8 w-8 rounded-full ring-2 ring-primary/30"
-                  src={user.avatarUrl || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&h=100"}
-                  alt="User profile"
-                />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-white">{user.fullName}</p>
-                <p className="text-xs font-medium text-gray-400">{user.email}</p>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="flex-shrink-0 w-14" aria-hidden="true">
-        {/* Dummy element to force sidebar to shrink to fit close icon */}
-      </div>
-    </div>
-  );
-
-  return (
-    <>
-      {desktopSidebar}
-      {mobileSidebar}
-    </>
-  );
+            )}
+        </>
+    );
 }
