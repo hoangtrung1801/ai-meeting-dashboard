@@ -15,6 +15,7 @@ import {
 import { useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import botApi from "@/lib/api/bot.api";
 
 interface NewMeetingModalProps {
     open: boolean;
@@ -25,8 +26,6 @@ const formSchema = z.object({
     meetingId: z
         .string()
         .min(3, { message: "Meeting ID must be at least 3 characters" }),
-    botId: z.string().min(1, { message: "Please select a bot" }),
-    isRecording: z.boolean().default(true),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -38,31 +37,13 @@ export function NewMeetingModal({ open, onOpenChange }: NewMeetingModalProps) {
         resolver: zodResolver(formSchema),
         defaultValues: {
             meetingId: "",
-            botId: "",
-            isRecording: true,
         },
     });
 
     const createMeetingMutation = useMutation({
         mutationFn: async (data: FormValues) => {
-            // Prepare meeting data
-            const meetingData = {
-                botId: data.botId,
-                userId: 1, // Current user
-                status: "pending",
-                meetingId: data.meetingId,
-                isRecording: data.isRecording,
-                transcription: "",
-                summarization: "",
-                outputUrl: "",
-            };
-
-            const response = await apiRequest(
-                "POST",
-                "/api/meetings",
-                meetingData
-            );
-            return response.json();
+            const res = await botApi.startRecording(data.meetingId);
+            return res;
         },
         onSuccess: () => {
             // Reset form and close modal
@@ -130,42 +111,6 @@ export function NewMeetingModal({ open, onOpenChange }: NewMeetingModalProps) {
                                             {...field}
                                         />
                                     </FormControl>
-                                </FormItem>
-                            )}
-                        />
-
-                        <FormField
-                            control={form.control}
-                            name="botId"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Bot ID</FormLabel>
-                                    <FormControl>
-                                        <Input
-                                            placeholder="Enter bot ID"
-                                            {...field}
-                                        />
-                                    </FormControl>
-                                </FormItem>
-                            )}
-                        />
-
-                        <FormField
-                            control={form.control}
-                            name="isRecording"
-                            render={({ field }) => (
-                                <FormItem className="flex items-center space-x-2 space-y-0">
-                                    <FormControl>
-                                        <input
-                                            type="checkbox"
-                                            checked={field.value}
-                                            onChange={field.onChange}
-                                            className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                                        />
-                                    </FormControl>
-                                    <FormLabel className="text-sm text-gray-900">
-                                        Enable recording
-                                    </FormLabel>
                                 </FormItem>
                             )}
                         />
