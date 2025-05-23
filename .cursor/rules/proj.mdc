@@ -1,0 +1,8 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+use pnpm to install packages
+Project has both frontend (/client) and backend (/server)
+Using Mikro ORM to connect mongodb

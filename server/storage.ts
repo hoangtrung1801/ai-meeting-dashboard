@@ -16,7 +16,7 @@ import {
 export interface IStorage {
     // User operations
     getUser(id: string): Promise<User | null>;
-    getUserByUsername(username: string): Promise<User | null>;
+    getUserByEmail(username: string): Promise<User | null>;
     createUser(user: CreateUserDto): Promise<User>;
 
     // Meeting operations
@@ -79,8 +79,8 @@ export class MongoStorage implements IStorage {
         }
     }
 
-    async getUserByUsername(username: string): Promise<User | null> {
-        return this.getEm().findOne(User, { username });
+    async getUserByEmail(email: string): Promise<User | null> {
+        return this.getEm().findOne(User, { email });
     }
 
     async createUser(userData: CreateUserDto): Promise<User> {
