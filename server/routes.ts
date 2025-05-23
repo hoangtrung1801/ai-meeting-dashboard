@@ -1,5 +1,5 @@
 import { MongoEntityManager } from "@mikro-orm/mongodb";
-import { Meeting, MeetingStatus, User } from "@shared/schema";
+import { Meeting, MeetingStatus, MeetingType, User } from "@shared/schema";
 import type { Express, Request, Response } from "express";
 import { createServer } from "http";
 import { z } from "zod";
@@ -7,6 +7,7 @@ import { getStorage } from "./storage";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { sign } from "crypto";
+import { fileURLToPath } from "url";
 
 // Extend Express Request type to include user
 declare global {
@@ -32,12 +33,31 @@ const createUserSchema = z.object({
     avatarUrl: z.string().optional(),
 });
 
+const scheduleMeetingSchema = z.object({
+    title: z.string().min(1, "Title is required"),
+    description: z.string().optional(),
+    startTime: z.string().transform((str) => new Date(str)),
+    duration: z
+        .number()
+        .min(15, "Duration must be at least 15 minutes")
+        .max(480, "Duration cannot exceed 8 hours"),
+    participants: z.array(z.string().email("Invalid email address")),
+    meetingLink: z.string().url("Invalid meeting link").optional(),
+});
+
 const createMeetingSchema = z.object({
     id: z.string(),
-    botId: z.string(),
+    botId: z.string().optional(),
     user: z.instanceof(User),
+    type: z.nativeEnum(MeetingType),
     status: z.nativeEnum(MeetingStatus),
-    meetingId: z.string(),
+    title: z.string(),
+    description: z.string().optional(),
+    startTime: z.date(),
+    duration: z.number(),
+    participants: z.array(z.string()),
+    meetingId: z.string().optional(),
+    meetingLink: z.string().optional(),
     isRecording: z.boolean(),
     transcription: z.string(),
     summarization: z.string(),
@@ -257,6 +277,51 @@ export async function registerRoutes(app: Express) {
             });
         }
     });
+
+    // Get meetings for a specific date range
+    app.get(
+        "/api/meetings/range",
+        authenticateToken,
+        async (req: Request, res: Response) => {
+            try {
+                const startDate = new Date(req.query.start as string);
+                const endDate = new Date(req.query.end as string);
+
+                console.log({
+                    startDate,
+                    endDate,
+                    start: req.query.start,
+                    end: req.query.end,
+                });
+
+                if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+                    return res.status(400).json({
+                        message: "Invalid date range",
+                    });
+                }
+
+                // const userId = (req.user as any).id;
+                const userId = "67f11338f08f7ee6f0875533";
+                const meetings = await storage.getMeetingsByUserId(userId);
+
+                const filteredMeetings = meetings.filter((meeting) => {
+                    const meetingDate = new Date(meeting.createdAt);
+                    return meetingDate >= startDate && meetingDate <= endDate;
+                });
+
+                res.json(filteredMeetings);
+            } catch (error) {
+                console.error("Error fetching meetings:", error);
+                res.status(500).json({
+                    message: "Failed to fetch meetings",
+                    error:
+                        error instanceof Error
+                            ? error.message
+                            : "Unknown error",
+                });
+            }
+        }
+    );
 
     // Get all meetings
     app.get("/api/meetings", async (req: Request, res: Response) => {
@@ -503,6 +568,136 @@ export async function registerRoutes(app: Express) {
             res.status(500).json({ message: "Search failed" });
         }
     });
+
+    // Schedule a new meeting
+    app.post(
+        "/api/meetings/schedule",
+        authenticateToken,
+        async (req: Request, res: Response) => {
+            try {
+                const validationResult = scheduleMeetingSchema.safeParse(
+                    req.body
+                );
+                if (!validationResult.success) {
+                    return res.status(400).json({
+                        message: "Invalid meeting data",
+                        errors: validationResult.error.errors,
+                    });
+                }
+
+                const userId = (req.user as any).id;
+                const user = await storage.getUser(userId);
+                if (!user) {
+                    return res.status(404).json({ message: "User not found" });
+                }
+
+                // Check for scheduling conflicts
+                const startTime = validationResult.data.startTime;
+                const endTime = new Date(
+                    startTime.getTime() + validationResult.data.duration * 60000
+                );
+
+                const existingMeetings = await storage.getMeetingsByUserId(
+                    userId
+                );
+                const hasConflict = existingMeetings.some((meeting) => {
+                    if (meeting.status === MeetingStatus.CANCELLED)
+                        return false;
+
+                    const meetingEndTime = new Date(
+                        meeting.startTime.getTime() + meeting.duration * 60000
+                    );
+                    return (
+                        (startTime >= meeting.startTime &&
+                            startTime < meetingEndTime) ||
+                        (endTime > meeting.startTime &&
+                            endTime <= meetingEndTime) ||
+                        (startTime <= meeting.startTime &&
+                            endTime >= meetingEndTime)
+                    );
+                });
+
+                if (hasConflict) {
+                    return res.status(409).json({
+                        message:
+                            "There is a scheduling conflict with an existing meeting",
+                    });
+                }
+
+                const meeting = await storage.createMeeting({
+                    id: crypto.randomUUID(),
+                    user,
+                    type: MeetingType.SCHEDULED,
+                    status: MeetingStatus.SCHEDULED,
+                    title: validationResult.data.title,
+                    description: validationResult.data.description ?? "",
+                    startTime: validationResult.data.startTime,
+                    duration: validationResult.data.duration,
+                    participants: validationResult.data.participants,
+                    meetingLink: validationResult.data.meetingLink ?? "",
+                    isRecording: false,
+                    transcription: "",
+                    summarization: "",
+                    outputUrl: "",
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                });
+
+                res.status(201).json(meeting);
+            } catch (error) {
+                console.error("Error scheduling meeting:", error);
+                res.status(500).json({
+                    message: "Failed to schedule meeting",
+                    error:
+                        error instanceof Error
+                            ? error.message
+                            : "Unknown error",
+                });
+            }
+        }
+    );
+
+    // Cancel a meeting
+    app.post(
+        "/api/meetings/:id/cancel",
+        authenticateToken,
+        async (req: Request, res: Response) => {
+            try {
+                const meeting = await storage.getMeeting(req.params.id);
+                if (!meeting) {
+                    return res
+                        .status(404)
+                        .json({ message: "Meeting not found" });
+                }
+
+                const userId = (req.user as any).id;
+                if (meeting.user._id.toString() !== userId) {
+                    return res.status(403).json({
+                        message: "Not authorized to cancel this meeting",
+                    });
+                }
+
+                const updatedMeeting = await storage.updateMeeting(
+                    req.params.id,
+                    {
+                        status: MeetingStatus.CANCELLED,
+                        updatedAt: new Date(),
+                    }
+                );
+
+                res.json(updatedMeeting);
+            } catch (error) {
+                console.error("Error cancelling meeting:", error);
+                res.status(500).json({
+                    message: "Failed to cancel meeting",
+                    error:
+                        error instanceof Error
+                            ? error.message
+                            : "Unknown error",
+                });
+            }
+        }
+    );
 
     const httpServer = createServer(app);
     return httpServer;

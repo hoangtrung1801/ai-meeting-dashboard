@@ -101,7 +101,7 @@ export class MongoStorage implements IStorage {
     async getMeetingsByUserId(userId: string): Promise<Meeting[]> {
         return this.getEm().find(
             Meeting,
-            { user: userId },
+            { userId: new ObjectId(userId) },
             {
                 orderBy: { createdAt: "DESC" },
             }

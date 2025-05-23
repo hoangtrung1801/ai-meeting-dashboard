@@ -34,10 +34,19 @@ export class User {
     meetings = new Collection<Meeting>(this);
 }
 
+// Meeting type enum
+export enum MeetingType {
+    SCHEDULED = "scheduled",
+    BOT = "bot",
+}
+
 // Meeting status enum
 export enum MeetingStatus {
     PENDING = "pending",
+    SCHEDULED = "scheduled",
+    IN_PROGRESS = "in_progress",
     COMPLETED = "completed",
+    CANCELLED = "cancelled",
     FAILED = "failed",
 }
 
@@ -50,17 +59,41 @@ export class Meeting {
     @Property({ type: "string" })
     id!: string;
 
-    @Property({ type: "string" })
-    botId!: string;
+    @Property({ type: "string", nullable: true })
+    botId?: string;
+
+    @Property({ type: "ObjectId" })
+    userId!: ObjectId;
 
     @ManyToOne(() => User)
     user!: User;
+
+    @Enum(() => MeetingType)
+    type: MeetingType = MeetingType.SCHEDULED;
 
     @Enum(() => MeetingStatus)
     status: MeetingStatus = MeetingStatus.PENDING;
 
     @Property({ type: "string" })
-    meetingId!: string;
+    title!: string;
+
+    @Property({ type: "string" })
+    description: string = "";
+
+    @Property({ type: "date" })
+    startTime!: Date;
+
+    @Property({ type: "number" })
+    duration!: number; // Duration in minutes
+
+    @Property({ type: "array" })
+    participants: string[] = []; // Array of participant emails
+
+    @Property({ type: "string", nullable: true })
+    meetingId?: string;
+
+    @Property({ type: "string", nullable: true })
+    meetingLink?: string;
 
     @Property({ type: "boolean" })
     isRecording: boolean = false;
@@ -158,7 +191,13 @@ export interface TranscriptSegment {
 export interface BotMeetingData {
     _id: string;
     userId: string;
+    type: MeetingType;
     status: MeetingStatus;
+    title?: string;
+    description?: string;
+    startTime?: Date;
+    duration?: number;
+    participants?: string[];
     meetingId: string;
     isRecording: boolean;
     transcription: string;
