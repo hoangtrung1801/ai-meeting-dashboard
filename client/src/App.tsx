@@ -95,11 +95,19 @@ function AppRoutes() {
                     <Meetings />
                 </ProtectedRoute>
             </Route>
+
+            <Route path="/meetings/:id">
+                <ProtectedRoute>
+                    <MeetingDetail />
+                </ProtectedRoute>
+            </Route>
+
             <Route path="/action-items">
                 <ProtectedRoute>
                     <ActionItems />
                 </ProtectedRoute>
             </Route>
+
             <Route path="/calendar">
                 <ProtectedRoute>
                     <Calendar />

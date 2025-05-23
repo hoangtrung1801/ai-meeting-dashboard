@@ -6,6 +6,7 @@ import { z } from "zod";
 import { getStorage } from "./storage";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { sign } from "crypto";
 
 // Extend Express Request type to include user
 declare global {
@@ -350,13 +351,21 @@ export async function registerRoutes(app: Express) {
         "/api/meetings/:id/transcript",
         async (req: Request, res: Response) => {
             try {
-                const transcript = await storage.getTranscript(req.params.id);
-                if (!transcript) {
+                // const transcript = await storage.getTranscript(req.params.id);
+                // if (!transcript) {
+                //     return res
+                //         .status(404)
+                //         .json({ message: "Transcript not found" });
+                // }
+
+                const meeting = await storage.getMeeting(req.params.id);
+                if (!meeting) {
                     return res
                         .status(404)
-                        .json({ message: "Transcript not found" });
+                        .json({ message: "Meeting not found" });
                 }
-                res.json(transcript);
+
+                res.json({ content: meeting.transcription });
             } catch (error) {
                 res.status(500).json({ message: "Failed to fetch transcript" });
             }
@@ -368,13 +377,13 @@ export async function registerRoutes(app: Express) {
         "/api/meetings/:id/summary",
         async (req: Request, res: Response) => {
             try {
-                const summary = await storage.getSummary(req.params.id);
-                if (!summary) {
+                const meeting = await storage.getMeeting(req.params.id);
+                if (!meeting) {
                     return res
                         .status(404)
-                        .json({ message: "Summary not found" });
+                        .json({ message: "Meeting not found" });
                 }
-                res.json(summary);
+                res.json({ content: meeting.summarization });
             } catch (error) {
                 res.status(500).json({ message: "Failed to fetch summary" });
             }

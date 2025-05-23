@@ -195,6 +195,67 @@ export default function Dashboard() {
                     )}
                 </div>
 
+                {/* Currently Recording Meetings */}
+                <div className="mb-8">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-lg font-medium text-dark">
+                            Currently Recording
+                        </h2>
+                        <Link href="/meetings">
+                            <a className="text-sm text-primary hover:text-blue-700">
+                                View all meetings
+                            </a>
+                        </Link>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                        {isMeetingsLoading ? (
+                            // Skeleton loading state
+                            Array(2)
+                                .fill(null)
+                                .map((_, index) => (
+                                    <div
+                                        key={index}
+                                        className="bg-white shadow rounded-lg overflow-hidden animate-pulse"
+                                    >
+                                        <div className="h-48 bg-gray-200"></div>
+                                        <div className="p-4 space-y-3">
+                                            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                                            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                                            <div className="h-10 bg-gray-200 rounded"></div>
+                                        </div>
+                                    </div>
+                                ))
+                        ) : recentMeetings &&
+                          recentMeetings.filter((m) => m.isRecording).length >
+                              0 ? (
+                            recentMeetings
+                                .filter((meeting) => meeting.isRecording)
+                                .map((meeting) => (
+                                    <MeetingCard
+                                        key={meeting.id}
+                                        meeting={meeting}
+                                    />
+                                ))
+                        ) : (
+                            <div className="col-span-3 text-center py-10">
+                                <p className="text-gray-500">
+                                    No meetings are currently being recorded.
+                                </p>
+                                <Button
+                                    onClick={() =>
+                                        setIsNewMeetingModalOpen(true)
+                                    }
+                                    variant="link"
+                                    className="mt-2"
+                                >
+                                    Start a new recording
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
                 {/* Recent Meetings */}
                 <div className="mb-8">
                     <h2 className="text-lg font-medium text-dark mb-4">

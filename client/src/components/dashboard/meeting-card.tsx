@@ -31,6 +31,47 @@ export function MeetingCard({ meeting }: MeetingCardProps) {
         return defaultImage;
     };
 
+    // Get status style based on meeting status
+    const getStatusStyle = (status: string) => {
+        const styles = {
+            scheduled: {
+                bg: "bg-blue-100",
+                text: "text-blue-800",
+                icon: "fa-clock",
+                label: "Scheduled",
+            },
+            "in-progress": {
+                bg: "bg-yellow-100",
+                text: "text-yellow-800",
+                icon: "fa-spinner fa-spin",
+                label: "In Progress",
+            },
+            completed: {
+                bg: "bg-green-100",
+                text: "text-green-800",
+                icon: "fa-check-circle",
+                label: "Completed",
+            },
+            cancelled: {
+                bg: "bg-red-100",
+                text: "text-red-800",
+                icon: "fa-times-circle",
+                label: "Cancelled",
+            },
+        };
+
+        return (
+            styles[status.toLowerCase() as keyof typeof styles] || {
+                bg: "bg-gray-100",
+                text: "text-gray-800",
+                icon: "fa-circle",
+                label: status,
+            }
+        );
+    };
+
+    const statusStyle = getStatusStyle(meeting.status);
+
     return (
         <Link href={`/meetings/${meeting.id}`}>
             <a className="block bg-white shadow rounded-lg overflow-hidden hover:shadow-md transition-shadow duration-300">
@@ -45,8 +86,11 @@ export function MeetingCard({ meeting }: MeetingCardProps) {
                         <h3 className="text-lg font-semibold text-white">
                             {meeting.meetingId}
                         </h3>
-                        <span className="bg-black/40 text-white text-xs px-2 py-1 rounded-full">
-                            {meeting.status}
+                        <span
+                            className={`${statusStyle.bg} ${statusStyle.text} text-xs px-3 py-1.5 rounded-full font-medium flex items-center gap-1.5 shadow-sm`}
+                        >
+                            <i className={`fas ${statusStyle.icon}`}></i>
+                            {statusStyle.label}
                         </span>
                     </div>
                 </div>
