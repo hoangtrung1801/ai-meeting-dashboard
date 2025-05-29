@@ -255,7 +255,9 @@ export class MongoStorage implements IStorage {
 
   // Action item operations
   async getActionItems(meetingId: string): Promise<ActionItem[]> {
-    return this.getEm().find(ActionItem, { meeting: meetingId });
+    return this.getEm().find(ActionItem, {
+      meetingId: new ObjectId(meetingId),
+    });
   }
 
   async getPendingActionItems(userId: string): Promise<ActionItem[]> {
@@ -263,7 +265,8 @@ export class MongoStorage implements IStorage {
     const meetingIds = meetings.map((m) => m._id.toString());
 
     return this.getEm().find(ActionItem, {
-      meeting: { $in: meetingIds },
+      // meeting: { $in: meetingIds },
+      meetingId: { $in: meetingIds.map((id) => new ObjectId(id)) },
       completed: false,
     });
   }

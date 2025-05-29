@@ -447,6 +447,7 @@ export async function registerRoutes(app: Express) {
     "/api/meetings/:id/action-items",
     async (req: Request, res: Response) => {
       try {
+        console.log("Fetching action items for meeting:", req.params.id);
         const actionItems = await storage.getActionItems(req.params.id);
         res.json(actionItems);
       } catch (error) {

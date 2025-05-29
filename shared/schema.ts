@@ -119,8 +119,8 @@ export class Meeting {
   @OneToMany(() => Summary, (summary) => summary.meeting)
   summaries = new Collection<Summary>(this);
 
-  @OneToMany(() => ActionItem, (actionItem) => actionItem.meeting)
-  actionItems = new Collection<ActionItem>(this);
+  // @OneToMany(() => ActionItem, (actionItem) => actionItem.meeting)
+  // actionItems = new Collection<ActionItem>(this);
 
   @Property({ type: "array", nullable: true })
   utterances: Utterance[] = []; // Detailed utterances from the meeting with speaker, text, and timing data
@@ -176,13 +176,17 @@ export class Summary {
 }
 
 // ActionItem entity
-@Entity()
+@Entity({ tableName: "ActionItem", collection: "ActionItem" })
 export class ActionItem {
   @PrimaryKey({ type: "ObjectId" })
   _id!: ObjectId;
 
-  @ManyToOne(() => Meeting)
+  @ManyToOne(() => Meeting, { nullable: true })
   meeting!: Meeting;
+
+  // meetingId, ref to Meeting._id
+  @Property({ type: "ObjectId" })
+  meetingId!: ObjectId;
 
   @Property({ type: "string" })
   description!: string;
