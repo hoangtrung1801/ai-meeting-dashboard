@@ -119,6 +119,9 @@ importers:
       '@types/react-big-calendar':
         specifier: ^1.16.1
         version: 1.16.1
+      assemblyai:
+        specifier: ^4.12.2
+        version: 4.12.2(bufferutil@4.0.9)
       bcryptjs:
         specifier: ^3.0.2
         version: 3.0.2
@@ -2079,6 +2082,10 @@ packages:
   array-union@2.1.0:
     resolution: {integrity: sha512-HGyxoOTYUyCM6stUe6EJgnd4EoewAI7zMdfqO+kGjnlZmBDz/cR5pf8r/cR4Wq60sL/p0IkcjUEEPwS3GFrIyw==}
     engines: {node: '>=8'}
+
+  assemblyai@4.12.2:
+    resolution: {integrity: sha512-T0QPhKfKoIV1hiQgUvH8fmxYeDsNZI8gSvJHCntJnzQF/WwbtMrebc4z6rFy29QP1tp28iXlmABGRZjHwW0LEQ==}
+    engines: {node: '>=18'}
 
   autoprefixer@10.4.21:
     resolution: {integrity: sha512-O+A6LWV5LDHSJD3LjHYoNi4VLsj/Whi7k6zG12xTYaU4cQ8oxQGckXNX8cRHK5yOZ/ppVHe0ZBXGzSV9jXdVbQ==}
@@ -5401,6 +5408,13 @@ snapshots:
   array-flatten@1.1.1: {}
 
   array-union@2.1.0: {}
+
+  assemblyai@4.12.2(bufferutil@4.0.9):
+    dependencies:
+      ws: 8.18.2(bufferutil@4.0.9)
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
 
   autoprefixer@10.4.21(postcss@8.5.3):
     dependencies:

@@ -419,7 +419,10 @@ export async function registerRoutes(app: Express) {
           return res.status(404).json({ message: "Meeting not found" });
         }
 
-        res.json({ content: meeting.transcription });
+        res.json({
+          content: meeting.transcription,
+          utterances: meeting.utterances,
+        });
       } catch (error) {
         res.status(500).json({ message: "Failed to fetch transcript" });
       }

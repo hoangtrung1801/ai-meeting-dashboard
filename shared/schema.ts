@@ -121,6 +121,26 @@ export class Meeting {
 
   @OneToMany(() => ActionItem, (actionItem) => actionItem.meeting)
   actionItems = new Collection<ActionItem>(this);
+
+  @Property({ type: "array", nullable: true })
+  utterances: Utterance[] = []; // Detailed utterances from the meeting with speaker, text, and timing data
+}
+
+export interface UtteranceWord {
+  text: string;
+  start: number;
+  end: number;
+  confidence: number;
+  speaker: string;
+}
+
+export interface Utterance {
+  speaker: string;
+  text: string;
+  confidence: number;
+  start: number;
+  end: number;
+  words: UtteranceWord[];
 }
 
 // Transcript entity
